@@ -53,6 +53,35 @@ class InMemoryTicketStore:
         with self._lock:
             return self._tickets.get(ticket_id)
 
+    def list_tickets(self) -> list[dict[str, Any]]:
+        with self._lock:
+            return list(self._tickets.values())
+
+    def update_ticket(
+        self,
+        ticket_id: str,
+        *,
+        status: str | None = None,
+        summary: str | None = None,
+    ) -> dict[str, Any] | None:
+        with self._lock:
+            ticket = self._tickets.get(ticket_id)
+
+            if ticket is None:
+                return None
+
+            if status is not None:
+                ticket["status"] = status
+
+            if summary is not None:
+                ticket["summary"] = summary
+
+            ticket["updated_at"] = datetime.now(
+                timezone.utc
+            ).isoformat()
+
+            return ticket
+
 
 class TicketStore:
 
@@ -118,6 +147,32 @@ class TicketStore:
 
         return self.local_store.get_ticket(
             ticket_id
+        )
+
+    def list_tickets(self) -> list[dict[str, Any]]:
+        if self.dynamodb_store:
+            return self.dynamodb_store.list_tickets()
+
+        return self.local_store.list_tickets()
+
+    def update_ticket(
+        self,
+        ticket_id: str,
+        *,
+        status: str | None = None,
+        summary: str | None = None,
+    ) -> dict[str, Any] | None:
+        if self.dynamodb_store:
+            return self.dynamodb_store.update_ticket(
+                ticket_id,
+                status=status,
+                summary=summary,
+            )
+
+        return self.local_store.update_ticket(
+            ticket_id,
+            status=status,
+            summary=summary,
         )
 
 

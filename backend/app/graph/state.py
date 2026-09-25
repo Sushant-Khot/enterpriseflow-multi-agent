@@ -16,6 +16,7 @@ class AgentState(TypedDict, total=False):
     selected_agent: str
     routing_reason: str
     routing_source: str
+    authorization_status: str
 
     # Security
     security_status: str

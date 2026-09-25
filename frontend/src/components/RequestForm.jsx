@@ -124,15 +124,11 @@ function RequestForm() {
               Employee
             </option>
 
-            <option value="MANAGER">
-              Manager
-            </option>
-
-            <option value="HR">
+            <option value="HR_ADMIN">
               HR
             </option>
 
-            <option value="ADMIN">
+            <option value="SUPPORT_ADMIN">
               Administrator
             </option>
 
@@ -200,13 +196,30 @@ function RequestForm() {
           const response =
             result.response ?? result.message ?? "Request processed successfully.";
 
+          const status =
+            (result.status || "COMPLETED").toUpperCase();
+
+          let statusLabel;
+
+          if (status === "COMPLETED") {
+            statusLabel = "Workflow completed";
+          } else if (status === "WAITING_FOR_APPROVAL") {
+            statusLabel = "Waiting for human approval";
+          } else if (status === "SECURITY_BLOCKED") {
+            statusLabel = "Request blocked by security";
+          } else if (status === "FAILED") {
+            statusLabel = "Workflow failed";
+          } else {
+            statusLabel = status.replaceAll("_", " ");
+          }
+
           return (
 
         <div className="result-panel">
 
           <div className="result-header">
             <span>
-              Workflow completed
+              {statusLabel}
             </span>
 
             <span className="result-badge">
@@ -221,6 +234,12 @@ function RequestForm() {
               ? response
               : JSON.stringify(response, null, 2)}
           </div>
+
+          {status === "WAITING_FOR_APPROVAL" && (
+            <div className="result-response">
+              Open Approvals to complete human approval.
+            </div>
+          )}
 
         </div>
 

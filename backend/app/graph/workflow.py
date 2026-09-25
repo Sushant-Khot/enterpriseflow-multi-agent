@@ -29,6 +29,9 @@ from backend.app.agents.salary_agent import (
 from backend.app.agents.support_agent import (
     support_agent,
 )
+from backend.app.core.rbac import (
+    allowed_intent,
+)
 
 
 # =====================================================
@@ -57,6 +60,34 @@ def orchestrator_node(
         state["user_input"]
     )
 
+    employee_data = state.get("tool_results", {}).get(
+        "employee_data",
+        {},
+    )
+    authorized = allowed_intent(
+        role=state.get("user_role", ""),
+        intent=decision.intent,
+        employee_id=employee_data.get("employee_id"),
+        user_id=state.get("user_id"),
+    )
+
+    if not authorized:
+        return {
+            "intent": decision.intent,
+            "confidence": decision.confidence,
+            "selected_agent": "NONE",
+            "routing_reason": decision.reason,
+            "routing_source": getattr(
+                decision,
+                "source",
+                "orchestrator",
+            ),
+            "authorization_status": "DENIED",
+            "status": "FORBIDDEN",
+            "error": "The current role is not authorized for this request.",
+            "response": "You are not authorized to perform this action.",
+        }
+
     return {
         "intent": decision.intent,
         "confidence": decision.confidence,
@@ -64,9 +95,10 @@ def orchestrator_node(
         "routing_reason": decision.reason,
         "routing_source": getattr(
             decision,
-            "routing_source",
+            "source",
             "orchestrator",
         ),
+        "authorization_status": "AUTHORIZED",
     }
 
 
@@ -77,6 +109,9 @@ def orchestrator_node(
 def route_agent(
     state: AgentState,
 ):
+
+    if state.get("authorization_status") == "DENIED":
+        return "access_denied"
 
     agent = state.get(
         "selected_agent"
@@ -95,6 +130,16 @@ def route_agent(
         return "a4_support"
 
     return "a4_support"
+
+
+def access_denied_node(
+    state: AgentState,
+) -> dict:
+    return {
+        "status": "FORBIDDEN",
+        "response": "You are not authorized to perform this action.",
+        "requires_human_approval": False,
+    }
 
 
 # =====================================================
@@ -156,6 +201,11 @@ builder.add_node(
     support_agent,
 )
 
+builder.add_node(
+    "access_denied",
+    access_denied_node,
+)
+
 
 # =====================================================
 # Graph edges
@@ -180,6 +230,7 @@ builder.add_conditional_edges(
         "a2_background": "a2_background",
         "a3_salary": "a3_salary",
         "a4_support": "a4_support",
+        "access_denied": "access_denied",
     },
 )
 
@@ -207,6 +258,11 @@ builder.add_edge(
 
 builder.add_edge(
     "a4_support",
+    END,
+)
+
+builder.add_edge(
+    "access_denied",
     END,
 )
 

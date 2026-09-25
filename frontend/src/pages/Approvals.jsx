@@ -22,6 +22,11 @@ export default function Approvals() {
     setLoading,
   ] = useState(true);
 
+  const [
+    error,
+    setError,
+  ] = useState("");
+
 
   /*
    * Temporary development behavior:
@@ -40,6 +45,7 @@ export default function Approvals() {
     async () => {
 
       try {
+        setError("");
 
         const approvalId =
           sessionStorage.getItem(
@@ -53,16 +59,22 @@ export default function Approvals() {
 
         const data =
           await getApproval(
-            approvalId
+            approvalId,
+            "HR001",
+            "HR_ADMIN"
           );
 
         setApproval(data);
 
-      } catch (error) {
+      } catch (err) {
 
         console.error(
           "Failed to load approval:",
-          error
+          err
+        );
+
+        setError(
+          "Unable to load approval. Please check that the backend is running."
         );
 
       } finally {
@@ -117,6 +129,13 @@ export default function Approvals() {
       </div>
 
 
+      {error && (
+        <div className="error-banner">
+          {error}
+        </div>
+      )}
+
+
       {loading && (
         <div className="loading-state">
           Loading approvals...
@@ -124,7 +143,7 @@ export default function Approvals() {
       )}
 
 
-      {!loading && !approval && (
+      {!loading && !error && !approval && (
 
         <div className="empty-state">
 
@@ -142,7 +161,7 @@ export default function Approvals() {
       )}
 
 
-      {!loading && approval && (
+      {!loading && !error && approval && (
 
         <ApprovalCard
           approval={approval}

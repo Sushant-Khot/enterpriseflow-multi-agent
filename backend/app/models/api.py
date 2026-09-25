@@ -26,6 +26,13 @@ class ChatRequest(BaseModel):
 class ApprovalRequest(BaseModel):
     approved: bool
     feedback: str = ""
+    user_id: str = Field(min_length=1, max_length=100)
+    user_role: UserRole
+
+
+class TicketUpdateRequest(BaseModel):
+    status: Literal["OPEN", "IN_PROGRESS", "RESOLVED"] | None = None
+    summary: str | None = Field(default=None, min_length=1, max_length=300)
 
 class ApprovalResponse(BaseModel):
     approval_id: str

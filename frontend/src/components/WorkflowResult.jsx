@@ -33,6 +33,18 @@ export default function WorkflowResult({
       ? response
       : JSON.stringify(response, null, 2);
 
+  const intent =
+    result.intent ?? result.metadata?.intent ?? "-";
+
+  const agent =
+    result.selected_agent ??
+    result.metadata?.selected_agent ??
+    result.metadata?.agent ??
+    "-";
+
+  const confidence =
+    result.metadata?.confidence;
+
 
   return (
     <div className="workflow-result">
@@ -93,8 +105,7 @@ export default function WorkflowResult({
             </span>
 
             <strong>
-              {result.metadata.intent ||
-                "-"}
+              {intent}
             </strong>
           </div>
 
@@ -105,9 +116,7 @@ export default function WorkflowResult({
             </span>
 
             <strong>
-              {result.metadata
-                .selected_agent ||
-                "-"}
+              {agent}
             </strong>
           </div>
 
@@ -118,11 +127,9 @@ export default function WorkflowResult({
             </span>
 
             <strong>
-              {result.metadata
-                .confidence != null
+              {confidence != null
                 ? `${(
-                    result.metadata
-                      .confidence * 100
+                    confidence * 100
                   ).toFixed(0)}%`
                 : "-"}
             </strong>

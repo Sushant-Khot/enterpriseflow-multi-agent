@@ -14,11 +14,6 @@ class InMemoryApprovalStore:
         workflow_id: str,
         review: str,
     ) -> dict[str, Any]:
-        existing = self.get_by_workflow(workflow_id)
-
-        if existing:
-            return existing
-
         approval_id = f"APR-{uuid.uuid4().hex[:10].upper()}"
         now = datetime.now(timezone.utc).isoformat()
         approval = {

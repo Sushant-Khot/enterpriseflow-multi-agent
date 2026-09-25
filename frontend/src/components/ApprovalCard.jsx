@@ -40,6 +40,8 @@ export default function ApprovalCard({
           {
             approved,
             feedback,
+            user_id: "HR001",
+            user_role: "HR_ADMIN",
           }
         );
 

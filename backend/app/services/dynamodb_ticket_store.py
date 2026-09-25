@@ -56,3 +56,32 @@ class DynamoDBTicketStore:
         )
 
         return response.get("Item")
+
+    def list_tickets(self) -> list[dict[str, Any]]:
+        response = self.table.scan()
+        return response.get("Items", [])
+
+    def update_ticket(
+        self,
+        ticket_id: str,
+        *,
+        status: str | None = None,
+        summary: str | None = None,
+    ) -> dict[str, Any] | None:
+        ticket = self.get_ticket(ticket_id)
+
+        if ticket is None:
+            return None
+
+        if status is not None:
+            ticket["status"] = status
+
+        if summary is not None:
+            ticket["summary"] = summary
+
+        ticket["updated_at"] = datetime.now(
+            timezone.utc
+        ).isoformat()
+
+        self.table.put_item(Item=ticket)
+        return ticket

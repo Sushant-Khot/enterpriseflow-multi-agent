@@ -1,4 +1,6 @@
-from fastapi import APIRouter, HTTPException
+import logging
+
+from fastapi import APIRouter, HTTPException, Query
 
 from langgraph.types import Command
 
@@ -11,7 +13,12 @@ from backend.app.models.api import (
     ChatRequest,
     ChatResponse,
     HealthResponse,
+    TicketUpdateRequest,
     WorkflowStatusResponse,
+)
+from backend.app.core.rbac import (
+    has_permission,
+    require_any_role,
 )
 from backend.app.services.approval_store import approval_store
 from backend.app.services.guardrails import (
@@ -21,13 +28,24 @@ from backend.app.services.monitoring import (
     record_metric,
 )
 from backend.app.services.workflow_store import workflow_store
+from backend.app.services.ticket_store import ticket_store
 
 router = APIRouter()
 settings = get_settings()
+logger = logging.getLogger(__name__)
 
 
 @router.get("/approvals/{approval_id}")
-async def get_approval(approval_id: str):
+async def get_approval(
+    approval_id: str,
+    user_id: str = Query(min_length=1),
+    user_role: str = Query(...),
+):
+    try:
+        require_any_role(user_role, {"HR_ADMIN"})
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+
     approval = approval_store.get(approval_id)
 
     if approval is None:
@@ -47,6 +65,11 @@ async def submit_approval(
     approval_id: str,
     request: ApprovalRequest,
 ):
+    try:
+        require_any_role(request.user_role, {"HR_ADMIN"})
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+
     approval = approval_store.get(approval_id)
 
     if approval is None:
@@ -211,6 +234,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
                     "response": response_text or review_text,
                     "approval_id": approval_id,
                     "approval_status": "PENDING",
+                    "iteration_count": result.get("iteration_count", 0),
                 },
             )
 
@@ -274,6 +298,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
             },
         )
     except Exception as exc:
+        logger.exception("Workflow execution failed: %s", exc)
         record_metric("WorkflowFailed")
 
         workflow_store.create(
@@ -288,6 +313,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
                 "selected_agent": "UNKNOWN",
                 "confidence": 0.0,
                 "response": "",
+                "iteration_count": 0,
                 "error": str(exc),
             },
         )
@@ -300,6 +326,75 @@ async def chat(request: ChatRequest) -> ChatResponse:
 @router.get("/workflows")
 async def get_workflows():
     return {"workflows": workflow_store.list_all()}
+
+
+def _require_ticket_permission(user_role: str, permission: str) -> None:
+    if not has_permission(user_role, permission):
+        raise HTTPException(
+            status_code=403,
+            detail=f"Role {user_role} is not authorized for {permission}.",
+        )
+
+
+@router.get("/tickets")
+async def list_tickets(
+    user_role: str = Query(...),
+):
+    _require_ticket_permission(user_role, "support.read")
+    return {"tickets": ticket_store.list_tickets()}
+
+
+@router.get("/tickets/{ticket_id}")
+async def get_ticket(
+    ticket_id: str,
+    user_id: str = Query(min_length=1),
+    user_role: str = Query(...),
+):
+    ticket = ticket_store.get_ticket(ticket_id)
+
+    if ticket is None:
+        raise HTTPException(status_code=404, detail="Ticket not found.")
+
+    if user_role == "EMPLOYEE" and ticket["user_id"] != user_id:
+        raise HTTPException(status_code=403, detail="You cannot access this ticket.")
+
+    if user_role != "EMPLOYEE":
+        _require_ticket_permission(user_role, "support.read")
+
+    return ticket
+
+
+@router.patch("/tickets/{ticket_id}")
+async def update_ticket(
+    ticket_id: str,
+    request: TicketUpdateRequest,
+    user_role: str = Query(...),
+):
+    _require_ticket_permission(user_role, "support.update")
+    ticket = ticket_store.update_ticket(
+        ticket_id,
+        status=request.status,
+        summary=request.summary,
+    )
+
+    if ticket is None:
+        raise HTTPException(status_code=404, detail="Ticket not found.")
+
+    return ticket
+
+
+@router.post("/tickets/{ticket_id}/resolve")
+async def resolve_ticket(
+    ticket_id: str,
+    user_role: str = Query(...),
+):
+    _require_ticket_permission(user_role, "support.resolve")
+    ticket = ticket_store.update_ticket(ticket_id, status="RESOLVED")
+
+    if ticket is None:
+        raise HTTPException(status_code=404, detail="Ticket not found.")
+
+    return ticket
 
 
 @router.get("/workflows/{workflow_id}/state")
@@ -360,7 +455,7 @@ def workflow_status(workflow_id: str) -> WorkflowStatusResponse:
         confidence=record.get("confidence", 0.0),
         routing_source=record.get("routing_source", "unknown"),
         routing_reason=record.get("routing_reason", ""),
-        iteration_count=record["iteration_count"],
+        iteration_count=record.get("iteration_count", 0),
         response=record["response"],
         error=record.get("error"),
     )

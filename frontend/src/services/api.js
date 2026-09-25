@@ -78,9 +78,13 @@ export async function getWorkflowState(
 }
 
 
-export async function getApproval(approvalId) {
+export async function getApproval(
+  approvalId,
+  userId = "HR001",
+  userRole = "HR_ADMIN"
+) {
   const response = await fetch(
-    `${API_URL}/approvals/${approvalId}`
+    `${API_URL}/approvals/${approvalId}?user_id=${encodeURIComponent(userId)}&user_role=${encodeURIComponent(userRole)}`
   );
 
   if (!response.ok) {

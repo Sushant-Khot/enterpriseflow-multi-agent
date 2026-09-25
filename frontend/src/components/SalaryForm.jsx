@@ -39,6 +39,9 @@ export default function SalaryForm({
 
         employee_data: {
 
+          employee_id:
+            userId,
+
           base_salary:
             Number(baseSalary),
 

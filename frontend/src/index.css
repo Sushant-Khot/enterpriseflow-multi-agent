@@ -632,8 +632,9 @@ button {
 }
 
 
-.form-error {
-  padding: 10px;
+.form-error,
+.error-banner {
+  padding: 12px 14px;
 
   background: #fef2f2;
 
@@ -641,11 +642,11 @@ button {
 
   color: #b91c1c;
 
-  border-radius: 7px;
+  border-radius: 8px;
 
-  font-size: 11px;
+  font-size: 13px;
 
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 
 
