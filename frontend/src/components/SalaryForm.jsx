@@ -4,10 +4,14 @@ import { useState } from "react";
 export default function SalaryForm({
   onSubmit,
   loading,
+  currentRole = "EMPLOYEE",
 }) {
 
   const [userId, setUserId] =
     useState("EMP001");
+
+  const [userRole, setUserRole] =
+    useState(currentRole);
 
   const [baseSalary, setBaseSalary] =
     useState("");
@@ -33,7 +37,7 @@ export default function SalaryForm({
 
       user_id: userId,
 
-      user_role: "HR_ADMIN",
+      user_role: userRole,
 
       context: {
 
@@ -94,6 +98,32 @@ export default function SalaryForm({
             }
             required
           />
+
+        </div>
+
+
+        <div className="form-group">
+
+          <label>
+            Role
+          </label>
+
+          <select
+            value={userRole}
+            onChange={(event) =>
+              setUserRole(event.target.value)
+            }
+          >
+            <option value="EMPLOYEE">
+              Employee
+            </option>
+            <option value="HR_ADMIN">
+              HR
+            </option>
+            <option value="SUPPORT_ADMIN">
+              Administrator
+            </option>
+          </select>
 
         </div>
 

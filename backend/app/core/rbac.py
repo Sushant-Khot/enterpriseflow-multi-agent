@@ -33,6 +33,7 @@ INTENT_PERMISSIONS = {
     "BACKGROUND_CHECK": "background.check",
     "SALARY_INCENTIVE": "salary.self",
     "SUPPORT_TICKET": "support.create",
+    "GENERAL_SUPPORT": "support.create",
 }
 
 
@@ -58,7 +59,7 @@ def allowed_intent(
         return False
 
     if intent == "SALARY_INCENTIVE" and role == "EMPLOYEE":
-        return employee_id in (None, user_id)
+        return bool(employee_id and employee_id == user_id)
 
     return True
 

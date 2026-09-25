@@ -43,6 +43,11 @@ def test_workflow_status():
             "message": "Calculate my incentive",
             "user_id": "EMP001",
             "user_role": "EMPLOYEE",
+            "context": {
+                "employee_data": {
+                    "employee_id": "EMP001",
+                }
+            },
         },
     )
 

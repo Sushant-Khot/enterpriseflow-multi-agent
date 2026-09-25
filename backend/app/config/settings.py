@@ -172,6 +172,20 @@ class Settings(BaseSettings):
         alias="SQS_QUEUE_URL",
     )
 
+    # -----------------------------
+    # RBAC
+    # -----------------------------
+
+    rbac_enabled: bool = Field(
+        default=True,
+        alias="RBAC_ENABLED",
+    )
+
+    default_role: str = Field(
+        default="EMPLOYEE",
+        alias="DEFAULT_ROLE",
+    )
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

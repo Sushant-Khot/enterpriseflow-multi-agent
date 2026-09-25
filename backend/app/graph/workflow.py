@@ -29,7 +29,11 @@ from backend.app.agents.salary_agent import (
 from backend.app.agents.support_agent import (
     support_agent,
 )
+from backend.app.config.settings import (
+    get_settings,
+)
 from backend.app.core.rbac import (
+    ROLES,
     allowed_intent,
 )
 
@@ -41,6 +45,18 @@ from backend.app.core.rbac import (
 def security_gate(
     state: AgentState,
 ) -> dict:
+    settings = get_settings()
+    user_role = state.get("user_role", "")
+
+    if settings.rbac_enabled and user_role not in ROLES:
+        return {
+            "security_status": "DENIED",
+            "authorization_status": "DENIED",
+            "status": "FORBIDDEN",
+            "error": f"Role '{user_role}' is not authorized. Must be one of: {', '.join(sorted(ROLES))}.",
+            "response": "You are not authorized to perform this action.",
+            "pii_detected": False,
+        }
 
     return {
         "security_status": "PASSED",
@@ -55,6 +71,14 @@ def security_gate(
 def orchestrator_node(
     state: AgentState,
 ) -> dict:
+    if state.get("authorization_status") == "DENIED" or state.get("security_status") == "DENIED":
+        return {
+            "selected_agent": "NONE",
+            "authorization_status": "DENIED",
+            "status": "FORBIDDEN",
+            "error": state.get("error", "The current role is not authorized for this request."),
+            "response": state.get("response", "You are not authorized to perform this action."),
+        }
 
     decision = classify_request(
         state["user_input"]

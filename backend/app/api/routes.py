@@ -253,6 +253,35 @@ async def chat(request: ChatRequest) -> ChatResponse:
                 selected_agent="A1_BLOG",
             )
 
+        if (
+            result.get("authorization_status") == "DENIED"
+            or result.get("status") == "FORBIDDEN"
+        ):
+            workflow_store.create(
+                workflow_id,
+                {
+                    "request_id": request_id,
+                    "user_id": request.user_id,
+                    "user_role": request.user_role,
+                    "message": request.message,
+                    "status": "FORBIDDEN",
+                    "intent": result.get("intent", "UNKNOWN"),
+                    "selected_agent": result.get("selected_agent", "NONE"),
+                    "confidence": result.get("confidence", 0.0),
+                    "routing_source": result.get("routing_source", "unknown"),
+                    "routing_reason": result.get("routing_reason", ""),
+                    "iteration_count": result.get("iteration_count", 0),
+                    "response": response_text or result.get("response", ""),
+                    "approval_id": result.get("approval_id"),
+                    "approval_status": result.get("approval_status"),
+                    "error": result.get("error"),
+                },
+            )
+            raise HTTPException(
+                status_code=403,
+                detail=result.get("error", "Access denied"),
+            )
+
         workflow_store.create(
             workflow_id,
             {
@@ -297,6 +326,8 @@ async def chat(request: ChatRequest) -> ChatResponse:
                 "approval_status": result.get("approval_status"),
             },
         )
+    except HTTPException:
+        raise
     except Exception as exc:
         logger.exception("Workflow execution failed: %s", exc)
         record_metric("WorkflowFailed")
