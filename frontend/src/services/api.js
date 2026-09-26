@@ -1,5 +1,4 @@
 const API_URL =
-  import.meta.env.VITE_API_URL ||
   "https://d2685l7dw08n6v.cloudfront.net/api/v1";
 
 
